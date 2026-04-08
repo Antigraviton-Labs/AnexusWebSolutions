@@ -132,26 +132,30 @@
 </div>
 </aside>
 <div class="lg:col-span-7 bg-surface-container-low p-8 md:p-16 rounded-3xl architectural-shadow">
-<form action="" class="space-y-8" method="POST">
+<div id="form-status" class="hidden mb-6 text-sm font-semibold px-4 py-3 rounded-xl border"></div>
+<form id="contact-form" action="https://formspree.io/f/mykbagpv" method="POST" class="space-y-8" novalidate>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 <div>
 <label class="block text-sm font-semibold text-on-surface uppercase tracking-widest mb-3" for="name">
                                 Your Name
                             </label>
-<input class="w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors text-on-surface" id="name" name="name" required="" type="text" placeholder="Enter your name"/>
+<input class="form-field w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors text-on-surface" id="name" name="name" type="text" placeholder="Enter your name" required/>
+<p class="field-error text-xs text-red-600 mt-2 hidden">Please enter at least 2 characters.</p>
 </div>
 <div>
 <label class="block text-sm font-semibold text-on-surface uppercase tracking-widest mb-3" for="email">
                                 Email Address
                             </label>
-<input class="w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors text-on-surface" id="email" name="email" required="" type="email" placeholder="your@email.com"/>
+<input class="form-field w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors text-on-surface" id="email" name="email" type="email" placeholder="your@email.com" required/>
+<p class="field-error text-xs text-red-600 mt-2 hidden">Enter a valid email address.</p>
 </div>
 </div>
 <div>
 <label class="block text-sm font-semibold text-on-surface uppercase tracking-widest mb-3" for="message">
                             Tell us about your project
                         </label>
-<textarea class="w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors resize-none text-on-surface" id="message" name="message" required="" rows="5" placeholder="Describe your project needs..."></textarea>
+<textarea class="form-field w-full bg-transparent border-0 border-b-2 border-outline-variant/30 py-3 px-0 focus:ring-0 focus:border-primary focus:border-b-3 transition-colors resize-none text-on-surface" id="message" name="message" rows="5" placeholder="Describe your project needs..." required></textarea>
+<p class="field-error text-xs text-red-600 mt-2 hidden">Message is required.</p>
 </div>
 <div class="pt-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
 <button class="lustre-button px-12 py-5 rounded-full text-white font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-4" type="submit">
@@ -203,4 +207,108 @@
 </footer>
 
 <script src="animations.js"></script>
+<script>
+  (function() {
+    const form = document.getElementById('contact-form');
+    if (!form) return;
+
+    const status = document.getElementById('form-status');
+    const fields = Array.from(form.querySelectorAll('.form-field'));
+    const endpoint = 'https://formspree.io/f/mykbagpv';
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    function showStatus(message, ok = true) {
+      if (!status) return;
+      status.textContent = message;
+      status.classList.remove('hidden');
+      status.classList.toggle('bg-green-50', ok);
+      status.classList.toggle('border-green-200', ok);
+      status.classList.toggle('text-green-700', ok);
+      status.classList.toggle('bg-red-50', !ok);
+      status.classList.toggle('border-red-200', !ok);
+      status.classList.toggle('text-red-700', !ok);
+    }
+
+    function setBusy(busy) {
+      if (!submitBtn) return;
+      submitBtn.disabled = busy;
+      submitBtn.classList.toggle('opacity-60', busy);
+      submitBtn.classList.toggle('cursor-not-allowed', busy);
+      submitBtn.querySelector('.material-symbols-outlined')?.classList.toggle('animate-spin-slow', busy);
+    }
+
+    function validate() {
+      let valid = true;
+      let firstErrorField = null;
+      fields.forEach(field => {
+        const errorEl = field.parentElement.querySelector('.field-error');
+        let message = '';
+        const value = field.value.trim();
+        if (field.id === 'name' && value.length < 2) {
+          message = 'Please enter at least 2 characters.';
+        }
+        if (field.id === 'email') {
+          const ok = value.length > 0 && field.checkValidity();
+          if (!ok) message = 'Enter a valid email address.';
+        }
+        if (field.id === 'message' && value.length === 0) {
+          message = 'Message is required.';
+        }
+        if (message) {
+          valid = false;
+          if (!firstErrorField) firstErrorField = field;
+          field.classList.add('border-red-400');
+          if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+          }
+        } else {
+          field.classList.remove('border-red-400');
+          if (errorEl) errorEl.classList.add('hidden');
+        }
+      });
+      if (firstErrorField) firstErrorField.focus({ preventScroll: false });
+      return valid;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status?.classList.add('hidden');
+
+      if (!validate()) {
+        showStatus('Please fix the highlighted fields.', false);
+        return;
+      }
+
+      const data = {
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        message: form.message.value.trim(),
+      };
+
+      try {
+        setBusy(true);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          form.reset();
+          showStatus('Message sent successfully. We will get back shortly.', true);
+        } else {
+          showStatus('Unable to send right now. Please try again or email us directly.', false);
+        }
+      } catch (err) {
+        showStatus('Network error. Please check your connection and retry.', false);
+      } finally {
+        setBusy(false);
+      }
+    });
+  })();
+</script>
 </body></html>
