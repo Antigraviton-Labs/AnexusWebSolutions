@@ -1,4 +1,4 @@
 ﻿User-agent: *
 Allow: /
-Sitemap: https://anexussebsolutions.vercel.app/sitemap.xml
+Sitemap: https://anexuswebsolutions.vercel.app/sitemap.xml
 
